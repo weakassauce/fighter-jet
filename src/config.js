@@ -24,10 +24,10 @@ export const JET = {
   wingArea: 28,
   airDensity: 1.10,          // sea-level-ish; we ignore altitude falloff for sim feel
 
-  // Control rates (rad/s at full deflection) — less twitchy
-  pitchRate: 0.85,
-  rollRate: 2.2,
-  yawRate: 0.4,
+  // Control rates (rad/s at full deflection)
+  pitchRate: 1.1,
+  rollRate: 2.8,
+  yawRate: 0.55,
 
   // Throttle behavior
   throttleResponse: 0.55,    // how fast throttle setting tracks input (per second)

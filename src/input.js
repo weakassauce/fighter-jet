@@ -17,8 +17,8 @@ export class Input {
       if (k === 'KeyF') this.actions.push('fireMissile');
     }
     this.keys.add(k);
-    // Prevent scroll on space
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k)) e.preventDefault();
+    // Prevent page scrolling on game keys
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD'].includes(k)) e.preventDefault();
   }
 
   _up(e) { this.keys.delete(e.code); }
@@ -26,14 +26,17 @@ export class Input {
   axes() {
     const k = this.keys;
     const ax = (a, b) => (k.has(a) ? 1 : 0) - (k.has(b) ? 1 : 0);
+    // Standard arcade-flight layout (Ace Combat / War Thunder / GTA style):
+    //   W/S        = throttle up/down
+    //   A/D        = roll left/right
+    //   ↑/↓        = pitch (Up = nose up — intuitive, not sim "stick forward = down")
+    //   ←/→ or Q/E = yaw (rudder)
+    //   Space      = guns,  F = missile,  R = reset,  V = view toggle
     return {
-      // S = nose up (pull stick back), W = nose down (push stick forward) — sim convention
-      pitch: ax('KeyS', 'KeyW'),
-      // A = roll left, D = roll right
+      pitch: ax('ArrowUp', 'ArrowDown'),
       roll:  ax('KeyD', 'KeyA'),
-      // Q = yaw left, E = yaw right
-      yaw:   ax('KeyE', 'KeyQ'),
-      throttle: ax('ShiftLeft', 'ControlLeft') + ax('ShiftRight', 'ControlRight'),
+      yaw:   ax('ArrowRight', 'ArrowLeft') + ax('KeyE', 'KeyQ'),
+      throttle: ax('KeyW', 'KeyS'),
       firingGuns: k.has('Space'),
     };
   }

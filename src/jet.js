@@ -103,12 +103,17 @@ export class Jet {
     this.throttleTarget = THREE.MathUtils.clamp(this.throttleTarget + controls.throttle * dt * 0.6, 0, 1);
     this.throttle += (this.throttleTarget - this.throttle) * Math.min(1, dt * JET.throttleResponse * 4);
 
-    // Apply control rotations in body frame
-    const pitchAng = controls.pitch * JET.pitchRate * dt;
-    const rollAng  = controls.roll  * JET.rollRate  * dt;
-    const yawAng   = controls.yaw   * JET.yawRate   * dt;
+    // Control surfaces need airflow to bite. At low speed they're sluggish; at
+    // cruise they feel snappy. This single multiplier on all three rates also
+    // makes stall-recovery feel right (you can't just yank out of a stall).
+    const speedNow = this.velocity.length();
+    const ctrlAuthority = THREE.MathUtils.clamp(speedNow / 80, 0.18, 1.0);
 
-    // Order: roll, pitch, yaw (intrinsic)
+    const pitchAng = controls.pitch * JET.pitchRate * dt * ctrlAuthority;
+    const rollAng  = controls.roll  * JET.rollRate  * dt * ctrlAuthority;
+    const yawAng   = controls.yaw   * JET.yawRate   * dt * ctrlAuthority;
+
+    // Order: roll, pitch, yaw (intrinsic body-frame)
     this._tmpQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -rollAng); this.quaternion.multiply(this._tmpQ);
     this._tmpQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitchAng); this.quaternion.multiply(this._tmpQ);
     this._tmpQ.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yawAng);   this.quaternion.multiply(this._tmpQ);
@@ -118,6 +123,23 @@ export class Jet {
     const fwd = this.forward();
     const up = this.up();
     const speed = this.velocity.length();
+
+    // Weathervaning: a small passive rotation that aligns the nose with the
+    // velocity vector — this is the dihedral / vertical-stab effect that keeps
+    // a real airframe from sliding sideways. Strength scales with airspeed.
+    if (speed > 5) {
+      const vDir = new THREE.Vector3().copy(this.velocity).divideScalar(speed);
+      const axis = new THREE.Vector3().crossVectors(fwd, vDir);
+      const dot = THREE.MathUtils.clamp(fwd.dot(vDir), -1, 1);
+      const misalign = Math.acos(dot);
+      if (axis.lengthSq() > 1e-6 && misalign > 0.01) {
+        axis.normalize();
+        const step = Math.min(misalign, 0.5 * dt * (speed / 100));
+        this._tmpQ.setFromAxisAngle(axis, step);
+        this.quaternion.premultiply(this._tmpQ);
+        this.quaternion.normalize();
+      }
+    }
 
     // Angle of attack: angle between velocity and forward, signed in pitch plane
     let aoa = 0;
@@ -154,13 +176,15 @@ export class Jet {
     force.addScaledVector(fwd, JET.maxThrust * this.throttle);
     // Drag opposes velocity
     if (speed > 0.1) force.addScaledVector(this.velocity, -dragMag / speed);
-    // Lift perpendicular to velocity, in body-up plane
+    // Lift perpendicular to velocity, in plane spanned by velocity and body up.
+    // Gram-Schmidt: liftDir = up - (up·v̂) v̂, normalized.
     if (speed > 1) {
-      // Build lift direction: perpendicular to velocity, in plane spanned by velocity and body up
-      const vNorm = this._tmpV.copy(this.velocity).divideScalar(speed);
-      const liftDir = new THREE.Vector3().copy(up).sub(vNorm.multiplyScalar(up.dot(this._tmpV.copy(this.velocity).divideScalar(speed))));
-      if (liftDir.lengthSq() > 1e-6) liftDir.normalize();
-      force.addScaledVector(liftDir, liftMag);
+      const vDir = new THREE.Vector3().copy(this.velocity).divideScalar(speed);
+      const liftDir = new THREE.Vector3().copy(up).addScaledVector(vDir, -up.dot(vDir));
+      if (liftDir.lengthSq() > 1e-6) {
+        liftDir.normalize();
+        force.addScaledVector(liftDir, liftMag);
+      }
     }
     // Gravity
     force.y -= JET.mass * 9.81;

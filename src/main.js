@@ -55,10 +55,18 @@ scene.add(camera); // camera must be in scene graph for children to render
 const cockpitGroup = new THREE.Group();
 cockpitGroup.visible = false;
 camera.add(cockpitGroup);
-// Soft fill light inside cockpit so panels stay readable when sun is behind us.
-const cockpitLight = new THREE.PointLight(0xfff0c8, 1.0, 4, 1.5);
-cockpitLight.position.set(0, 0.4, -0.2);
-cockpitGroup.add(cockpitLight);
+// Cockpit fill lighting — three sources so panels stay bright from every angle.
+// Key light from front-above (canopy daylight feel)
+const cockpitKey = new THREE.PointLight(0xfff4d8, 3.0, 6, 1.2);
+cockpitKey.position.set(0, 0.8, -0.5);
+cockpitGroup.add(cockpitKey);
+// Underglow from instrument panel (green/amber feel)
+const cockpitGlow = new THREE.PointLight(0xa0ffb0, 0.8, 3, 1.5);
+cockpitGlow.position.set(0, -0.3, -0.6);
+cockpitGroup.add(cockpitGlow);
+// Ambient bounce so dark corners don't disappear
+const cockpitAmb = new THREE.AmbientLight(0xb0c8e0, 0.5);
+cockpitGroup.add(cockpitAmb);
 // Cockpit tuning — exposed on window for live tweaking from devtools.
 const COCKPIT_TUNE = { scale: 2.2, x: 0, y: -0.55, z: -0.35, rotY: 0 };
 window.cockpit = COCKPIT_TUNE;

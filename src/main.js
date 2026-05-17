@@ -55,10 +55,35 @@ scene.add(camera); // camera must be in scene graph for children to render
 const cockpitGroup = new THREE.Group();
 cockpitGroup.visible = false;
 camera.add(cockpitGroup);
-// Soft fill light inside cockpit so panels stay readable when sun is behind us.
+// Directional, shape-revealing lighting — adds shading/contrast across surfaces
+// (switches, dials, panel edges) without flattening color or adding overall brightness.
+
+// Original soft warm fill, kept so panels never go pitch dark.
 const cockpitLight = new THREE.PointLight(0xfff0c8, 1.0, 4, 1.5);
 cockpitLight.position.set(0, 0.4, -0.2);
 cockpitGroup.add(cockpitLight);
+
+// Raking side directional — creates shadow/highlight gradient across the dash,
+// pulling switches and rivets out of the surface. Low intensity so it shapes
+// without brightening.
+const cockpitRake = new THREE.DirectionalLight(0xffffff, 0.5);
+cockpitRake.position.set(1.0, 0.4, -0.3);
+cockpitRake.target.position.set(0, 0, -0.6);
+cockpitGroup.add(cockpitRake);
+cockpitGroup.add(cockpitRake.target);
+
+// Rim from behind/below — picks out canopy frame edges and console silhouettes
+// against the brighter sky/world.
+const cockpitRim = new THREE.DirectionalLight(0xb8d4ff, 0.35);
+cockpitRim.position.set(-0.4, -0.3, 0.6);
+cockpitRim.target.position.set(0, 0.2, -0.4);
+cockpitGroup.add(cockpitRim);
+cockpitGroup.add(cockpitRim.target);
+
+// Hemisphere instead of ambient — gives subtle sky/ground tint variation that
+// reveals surface orientation, instead of flattening like flat ambient does.
+const cockpitHemi = new THREE.HemisphereLight(0xccd8e6, 0x2a2a30, 0.25);
+cockpitGroup.add(cockpitHemi);
 // Cockpit tuning — exposed on window for live tweaking from devtools.
 const COCKPIT_TUNE = { scale: 2.2, x: 0, y: -0.55, z: -0.35, rotY: 0 };
 window.cockpit = COCKPIT_TUNE;

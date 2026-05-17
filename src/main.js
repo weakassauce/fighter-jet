@@ -255,16 +255,23 @@ const camOffsetChase = new THREE.Vector3(0, 3.2, 14);
 const camOffsetCockpit = new THREE.Vector3(0, 0.7, -1.0);
 const camTmp = new THREE.Vector3();
 const camTarget = new THREE.Vector3();
+const camUp = new THREE.Vector3(0, 1, 0);
 function updateCamera(dt) {
   const offset = view === 'chase' ? camOffsetChase : camOffsetCockpit;
   camTmp.copy(offset).applyQuaternion(jet.quaternion).add(jet.position);
-  // Smooth follow
-  const lerp = view === 'chase' ? 1 - Math.exp(-dt * 6) : 1.0;
-  camera.position.lerp(camTmp, lerp);
-  // Look slightly ahead of the jet
+  // Tight follow in chase, snap in cockpit
+  const posLerp = view === 'chase' ? 1 - Math.exp(-dt * 14) : 1.0;
+  camera.position.lerp(camTmp, posLerp);
+  // Look ahead of the jet
   camTarget.copy(jet.position).addScaledVector(jet.forward(), view === 'chase' ? 30 : 200);
-  if (view === 'cockpit') camTarget.y += 0; // straight ahead
-  camera.up.copy(jet.up());
+  if (view === 'chase') {
+    // World-up chase cam: smoothly tracks roll without spinning the world during rolls
+    camUp.lerp(new THREE.Vector3(0, 1, 0), 1 - Math.exp(-dt * 6));
+    camera.up.copy(camUp);
+  } else {
+    // Cockpit view stays welded to the jet so the world feels right through the canopy
+    camera.up.copy(jet.up());
+  }
   camera.lookAt(camTarget);
 
   // Show cockpit only in cockpit view + hide player jet so we don't see its inside

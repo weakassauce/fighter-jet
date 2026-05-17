@@ -72,7 +72,7 @@ export function buildWorld(scene) {
   const trunkMat  = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9, flatShading: true });
   const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2c5a28, roughness: 0.85, flatShading: true });
 
-  const treeCount = 2400;
+  const treeCount = 9000;
   const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
   const leaves = new THREE.InstancedMesh(leavesGeo, leavesMat, treeCount);
   trunks.instanceMatrix.setUsage(THREE.StaticDrawUsage);

@@ -27,8 +27,8 @@ export class Input {
     const k = this.keys;
     const ax = (a, b) => (k.has(a) ? 1 : 0) - (k.has(b) ? 1 : 0);
     return {
-      // W = nose up, S = nose down (arcade convention, not sim "pull stick back")
-      pitch: ax('KeyW', 'KeyS'),
+      // S = nose up (pull stick back), W = nose down (push stick forward) — sim convention
+      pitch: ax('KeyS', 'KeyW'),
       // A = roll left, D = roll right
       roll:  ax('KeyD', 'KeyA'),
       // Q = yaw left, E = yaw right

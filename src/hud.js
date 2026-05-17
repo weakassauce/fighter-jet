@@ -106,9 +106,10 @@ export class HUD {
     // No bank rotation — pitch ladder stays screen-aligned (non-conformal).
     ctx.strokeStyle = 'rgba(159,255,166,0.7)';
     ctx.fillStyle = '#9fffa6';
-    const pxPerDeg = 8;
-    const halfHeight = Math.max(160, this.canvas.height * 0.4);
-    // Full range -90..+90; only ones inside the visible band actually draw.
+    // Wider spacing + narrow visible band → only ~3 lines on screen at a time;
+    // new lines slide in from top/bottom as the nose pitches.
+    const pxPerDeg = 22;
+    const halfHeight = 240;
     for (let deg = -90; deg <= 90; deg += 10) {
       const y = (pitchDeg - deg) * pxPerDeg;
       if (Math.abs(y) > halfHeight) continue;

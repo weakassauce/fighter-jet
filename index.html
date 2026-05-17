@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fighter Jet</title>
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; color: #9fffa6; font-family: ui-monospace, Menlo, Consolas, monospace; }
+      #app { position: fixed; inset: 0; }
+      #hud { position: fixed; inset: 0; pointer-events: none; }
+      #hud canvas { width: 100%; height: 100%; display: block; }
+      #help {
+        position: fixed; left: 12px; bottom: 12px; padding: 8px 10px;
+        background: rgba(0,0,0,0.45); border: 1px solid #1f5d2a; border-radius: 4px;
+        font-size: 12px; line-height: 1.4; color: #9fffa6;
+      }
+      #help b { color: #d8ffd8; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud"><canvas></canvas></div>
+    <div id="help">
+      <div><b>W/S</b> pitch &nbsp; <b>A/D</b> roll &nbsp; <b>Q/E</b> rudder</div>
+      <div><b>Shift/Ctrl</b> throttle &nbsp; <b>Space</b> guns &nbsp; <b>F</b> missile</div>
+      <div><b>R</b> reset &nbsp; <b>V</b> view</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

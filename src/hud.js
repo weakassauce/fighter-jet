@@ -58,12 +58,36 @@ export class HUD {
     // Hull (bottom-right)
     this._bar(W - 54, H - 200, 14, 160, Math.max(0, jet.hull / JET.maxHull), 'HUL', '#ff5555');
 
-    // AoA + stall
+    // AoA readout
     ctx.fillText(`AoA ${(jet.aoa * 180 / Math.PI).toFixed(1)}°`, 24, H - 24);
-    if (jet.stalled) {
-      ctx.fillStyle = '#ff3030';
-      ctx.fillText('STALL', cx - 22, cy + 40);
+    // Flashing stall warning: amber "near stall", red "STALL" when actually stalled.
+    // Flash rate is faster when fully stalled to convey severity.
+    if (jet.nearStall || jet.stalled) {
+      const t = performance.now() * 0.001;
+      const rate = jet.stalled ? 10 : 5;
+      const flash = Math.sin(t * rate) > 0;
+      const color = jet.stalled ? '#ff2020' : '#ffaa00';
+      const label = jet.stalled ? 'STALL' : 'STALL WARN';
+      const boxW = 150, boxH = 28;
+      const bx = cx - boxW / 2;
+      const by = cy + 56;
+      if (flash) {
+        ctx.fillStyle = color;
+        ctx.fillRect(bx, by, boxW, boxH);
+        ctx.fillStyle = '#000';
+      } else {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx, by, boxW, boxH);
+        ctx.fillStyle = color;
+        ctx.lineWidth = 1.5;
+      }
+      ctx.font = 'bold 16px ui-monospace, Menlo, Consolas, monospace';
+      const metrics = ctx.measureText(label);
+      ctx.fillText(label, cx - metrics.width / 2, by + 19);
+      ctx.font = '14px ui-monospace, Menlo, Consolas, monospace';
       ctx.fillStyle = '#9fffa6';
+      ctx.strokeStyle = '#9fffa6';
     }
 
     // Radar (bottom-center)

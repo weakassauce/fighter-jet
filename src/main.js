@@ -54,19 +54,24 @@ const explosions = new Explosions(scene);
 enemies.onDeath = (pos) => explosions.spawn(pos, 32);
 let playerExploded = false;
 
-// G-LOC: vision dims when pulling sustained high Gs. Recovers slowly.
+// G-LOC: vision dims only while actively maneuvering (turning hard) at high G.
+// Releasing the stick stops the buildup and starts fast recovery.
 let visionDim = 0;
-const G_THRESHOLD = 6.5;      // start darkening above this — harder to trigger
-const G_BLACKOUT = 11;        // full black cap raised — needs more sustained Gs
-function updateVisionDim(dt) {
+const G_THRESHOLD = 7.5;      // higher threshold — less easily triggered
+const G_BLACKOUT = 12;        // need a lot of G held for a long time
+function updateVisionDim(dt, ax) {
   const g = Math.abs(jet.gLoad);
-  if (g > G_THRESHOLD) {
-    // Build dim slowly so the screen fades to black over seconds, not instantly
+  // "Maneuvering" gate: dim only builds when the player is pulling stick (or
+  // hard rolling), so steady cruise at high Gs doesn't dim, and releasing the
+  // stick immediately stops accumulation.
+  const pulling = Math.abs(ax.pitch) > 0.35 || Math.abs(ax.roll) > 0.7;
+  if (g > G_THRESHOLD && pulling) {
     const over = g - G_THRESHOLD;
-    visionDim = Math.min(1, visionDim + (over / (G_BLACKOUT - G_THRESHOLD)) * dt * 0.35);
+    visionDim = Math.min(1, visionDim + (over / (G_BLACKOUT - G_THRESHOLD)) * dt * 0.18);
   } else {
-    // Recovery — slower at first, then faster (eyes adjusting)
-    const recover = 0.35 + (1 - visionDim) * 0.5;
+    // Recovery: faster the moment the player lets off the stick
+    const releaseBonus = pulling ? 0 : 0.4;
+    const recover = 0.35 + releaseBonus + (1 - visionDim) * 0.5;
     visionDim = Math.max(0, visionDim - dt * recover);
   }
 }
@@ -292,7 +297,7 @@ function frame(now) {
   explosions.update(dt);
 
   // Pilot vision dim (G-LOC)
-  updateVisionDim(dt);
+  updateVisionDim(dt, ax);
 
   // HUD
   hud.draw({ jet, enemies: enemies.list, lockTarget, lockProgress, visionDim });

@@ -137,6 +137,8 @@ export class Jet {
     const speedFactor = Math.min(1, speed / JET.stallSpeed);
     const effectiveStallAoA = JET.stallAoA + speedFactor * 0.4; // up to ~47° at full speed
     this.stalled = absAoA > effectiveStallAoA;
+    // Pre-stall warning when we're 75%+ of the way to critical AoA
+    this.nearStall = absAoA > effectiveStallAoA * 0.75;
     const cl = this.stalled
       ? JET.liftSlope * effectiveStallAoA * JET.postStallLift * Math.sign(aoa || 1)
       : JET.liftSlope * aoa;

@@ -29,13 +29,7 @@ export class Enemy {
 
   update(dt, target) {
     if (this.dead) {
-      // Tumble down
-      this.velocity.y -= 9.81 * dt;
-      this.position.addScaledVector(this.velocity, dt);
-      this.mesh.position.copy(this.position);
-      this.mesh.rotation.x += dt * 1.5;
-      this.mesh.rotation.z += dt * 2.0;
-      if (this.position.y < 0) this.mesh.visible = false;
+      this.mesh.visible = false;
       return null;
     }
 
@@ -80,8 +74,12 @@ export class Enemy {
   }
 
   takeDamage(d) {
+    if (this.dead) return;
     this.hull -= d;
-    if (this.hull <= 0) this.dead = true;
+    if (this.hull <= 0) {
+      this.dead = true;
+      if (this._onDeath) this._onDeath(this.position.clone());
+    }
   }
 }
 
@@ -89,7 +87,12 @@ export class EnemyManager {
   constructor(scene, template = null) {
     this.scene = scene;
     this.list = [];
-    for (let i = 0; i < ENEMIES.count; i++) this.list.push(new Enemy(scene, template));
+    this.onDeath = null;
+    for (let i = 0; i < ENEMIES.count; i++) {
+      const e = new Enemy(scene, template);
+      e._onDeath = (pos) => { if (this.onDeath) this.onDeath(pos); };
+      this.list.push(e);
+    }
   }
 
   replaceMeshes(template) {
@@ -100,7 +103,12 @@ export class EnemyManager {
     }
   }
 
-  spawnAll(playerPos) { for (const e of this.list) e.spawn(playerPos); }
+  spawnAll(playerPos) {
+    for (const e of this.list) {
+      e.mesh.visible = true;
+      e.spawn(playerPos);
+    }
+  }
 
   update(dt, player, onShot) {
     for (const e of this.list) {

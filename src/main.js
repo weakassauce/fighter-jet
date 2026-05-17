@@ -7,6 +7,7 @@ import { Bullets, Missile } from './weapons.js';
 import { HUD } from './hud.js';
 import { Input } from './input.js';
 import { tryLoadGLB, normalizeJetModel } from './asset_loader.js';
+import { Explosions } from './explosions.js';
 
 const app = document.getElementById('app');
 
@@ -47,6 +48,11 @@ tryLoadGLB('/assets/player_jet.glb').then((g) => {
 // Enemies
 const enemies = new EnemyManager(scene);
 enemies.spawnAll(jet.position);
+
+// Explosions
+const explosions = new Explosions(scene);
+enemies.onDeath = (pos) => explosions.spawn(pos, 32);
+let playerExploded = false;
 
 tryLoadGLB('/assets/enemy_jet.glb').then((g) => {
   if (!g) return;
@@ -169,9 +175,12 @@ const hud = new HUD();
 let view = 'cockpit'; // 'cockpit' | 'chase'  — first-person by default
 let gunCooldown = 0;
 let lockTarget = null;
+let lockProgress = 0;              // 0..1; 1 == fully acquired, fire-and-forget homing
+const LOCK_TIME = 1.4;             // seconds in cone to acquire full lock
+const LOCK_DECAY = 2.0;            // faster decay when target leaves cone
 
-function pickLock() {
-  // Lock onto closest enemy within cone and range
+function pickLock(dt) {
+  // Find best candidate currently in cone
   const fwd = jet.forward();
   let best = null, bestScore = MISSILE.lockCone;
   for (const e of enemies.list) {
@@ -183,7 +192,15 @@ function pickLock() {
     const dot = fwd.dot(to);
     if (dot > bestScore) { bestScore = dot; best = e; }
   }
-  lockTarget = best;
+  if (best !== lockTarget) {
+    // Switching target (or lost). Reset progress.
+    lockTarget = best;
+    lockProgress = 0;
+  } else if (lockTarget) {
+    lockProgress = Math.min(1, lockProgress + dt / LOCK_TIME);
+  } else {
+    lockProgress = Math.max(0, lockProgress - dt * LOCK_DECAY);
+  }
 }
 
 let last = performance.now();
@@ -198,12 +215,14 @@ function frame(now) {
   for (const a of input.drainActions()) {
     if (a === 'reset') { jet.reset(); enemies.spawnAll(jet.position); }
     if (a === 'toggleView') view = view === 'chase' ? 'cockpit' : 'chase';
-    if (a === 'fireMissile' && missileCooldown <= 0 && lockTarget && !lockTarget.dead) {
+    if (a === 'fireMissile' && missileCooldown <= 0) {
       const slot = missiles.find((m) => !m.alive);
       if (slot) {
         const pos = jet.position.clone().addScaledVector(jet.forward(), 6);
         const vel = jet.velocity.clone().add(jet.forward().multiplyScalar(80));
-        slot.fire(pos, vel, lockTarget);
+        // Only homing if we have full lock — otherwise fire dumb and go straight.
+        const homing = (lockProgress >= 1 && lockTarget && !lockTarget.dead) ? lockTarget : null;
+        slot.fire(pos, vel, homing);
         missileCooldown = 1.2;
       }
     }
@@ -229,7 +248,15 @@ function frame(now) {
   });
 
   // Lock targeting (every frame; cheap)
-  pickLock();
+  pickLock(dt);
+
+  // Player death → big boom
+  if (jet.dead && !playerExploded) {
+    explosions.spawn(jet.position.clone(), 50);
+    playerExploded = true;
+    jet.mesh.visible = false;
+  }
+  if (!jet.dead) playerExploded = false;
 
   // Resolve bullet damage
   playerBullets.update(dt, enemies.list, (target, dmg) => target.takeDamage(dmg));
@@ -244,8 +271,11 @@ function frame(now) {
   // Engine flame
   updateFlame(now * 0.001);
 
+  // Explosions
+  explosions.update(dt);
+
   // HUD
-  hud.draw({ jet, enemies: enemies.list, lockTarget });
+  hud.draw({ jet, enemies: enemies.list, lockTarget, lockProgress });
 
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -259,11 +289,11 @@ const camUp = new THREE.Vector3(0, 1, 0);
 function updateCamera(dt) {
   const offset = view === 'chase' ? camOffsetChase : camOffsetCockpit;
   camTmp.copy(offset).applyQuaternion(jet.quaternion).add(jet.position);
-  // Tight follow in chase, snap in cockpit
-  const posLerp = view === 'chase' ? 1 - Math.exp(-dt * 14) : 1.0;
+  // Very tight follow in chase so the camera consistently sits behind the jet
+  const posLerp = view === 'chase' ? 1 - Math.exp(-dt * 20) : 1.0;
   camera.position.lerp(camTmp, posLerp);
-  // Look ahead of the jet
-  camTarget.copy(jet.position).addScaledVector(jet.forward(), view === 'chase' ? 30 : 200);
+  // Look just past the jet so the back of the plane is centered, not flown past
+  camTarget.copy(jet.position).addScaledVector(jet.forward(), view === 'chase' ? 12 : 200);
   if (view === 'chase') {
     // World-up chase cam: smoothly tracks roll without spinning the world during rolls
     camUp.lerp(new THREE.Vector3(0, 1, 0), 1 - Math.exp(-dt * 6));

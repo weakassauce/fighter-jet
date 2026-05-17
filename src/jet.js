@@ -129,11 +129,15 @@ export class Jet {
     }
     this.aoa = aoa;
 
-    // Lift coefficient: linear up to stallAoA, then collapses
+    // Stall is energy-based: at high speed, the wing tolerates higher AoA
+    // (a high-speed pull-out doesn't stall). At low speed (low dynamic pressure),
+    // the critical AoA drops back to its base value.
     const absAoA = Math.abs(aoa);
-    this.stalled = absAoA > JET.stallAoA;
+    const speedFactor = Math.min(1, speed / JET.stallSpeed);
+    const effectiveStallAoA = JET.stallAoA + speedFactor * 0.4; // up to ~47° at full speed
+    this.stalled = absAoA > effectiveStallAoA;
     const cl = this.stalled
-      ? JET.liftSlope * JET.stallAoA * JET.postStallLift * Math.sign(aoa || 1)
+      ? JET.liftSlope * effectiveStallAoA * JET.postStallLift * Math.sign(aoa || 1)
       : JET.liftSlope * aoa;
 
     const q = 0.5 * JET.airDensity * speed * speed;     // dynamic pressure

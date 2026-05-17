@@ -16,7 +16,7 @@ export class HUD {
     this.canvas.height = window.innerHeight;
   }
 
-  draw({ jet, enemies, lockTarget }) {
+  draw({ jet, enemies, lockTarget, lockProgress = 0 }) {
     const ctx = this.ctx;
     const W = this.canvas.width, H = this.canvas.height;
     ctx.clearRect(0, 0, W, H);
@@ -69,16 +69,41 @@ export class HUD {
     // Radar (bottom-center)
     this._radar(cx, H - RADAR.size/2 - 24, jet, enemies);
 
-    // Lock indicator
+    // Lock indicator — yellow box while acquiring, red box + brackets when full lock
     if (lockTarget && !lockTarget.dead) {
       const screen = this._project(lockTarget.position, jet);
       if (screen) {
-        ctx.strokeStyle = '#ff5555';
-        ctx.strokeRect(screen.x - 18, screen.y - 18, 36, 36);
-        ctx.fillStyle = '#ff5555';
-        ctx.fillText('LOCK', screen.x + 22, screen.y - 18);
-        ctx.fillStyle = '#9fffa6';
+        const full = lockProgress >= 1;
+        // Yellow → red as progress rises
+        const r = 255;
+        const g = full ? 60 : Math.floor(220 - lockProgress * 160);
+        const b = full ? 60 : 60;
+        const color = `rgb(${r},${g},${b})`;
+        const size = full ? 22 : (32 - lockProgress * 12); // shrinks as it locks
+        ctx.strokeStyle = color;
+        ctx.lineWidth = full ? 2.5 : 1.5;
+        ctx.strokeRect(screen.x - size, screen.y - size, size * 2, size * 2);
+
+        // Acquisition progress bar above box
+        if (!full) {
+          ctx.fillStyle = color;
+          ctx.fillRect(screen.x - size, screen.y - size - 8, size * 2 * lockProgress, 4);
+          ctx.fillText('ACQ', screen.x + size + 4, screen.y - size + 4);
+        } else {
+          // Corner brackets to emphasize full lock
+          const b2 = 8;
+          ctx.beginPath();
+          ctx.moveTo(screen.x - size, screen.y - size + b2); ctx.lineTo(screen.x - size, screen.y - size); ctx.lineTo(screen.x - size + b2, screen.y - size);
+          ctx.moveTo(screen.x + size, screen.y - size + b2); ctx.lineTo(screen.x + size, screen.y - size); ctx.lineTo(screen.x + size - b2, screen.y - size);
+          ctx.moveTo(screen.x - size, screen.y + size - b2); ctx.lineTo(screen.x - size, screen.y + size); ctx.lineTo(screen.x - size + b2, screen.y + size);
+          ctx.moveTo(screen.x + size, screen.y + size - b2); ctx.lineTo(screen.x + size, screen.y + size); ctx.lineTo(screen.x + size - b2, screen.y + size);
+          ctx.stroke();
+          ctx.fillStyle = color;
+          ctx.fillText('LOCK', screen.x + size + 4, screen.y - size + 4);
+        }
+        ctx.lineWidth = 1.5;
         ctx.strokeStyle = '#9fffa6';
+        ctx.fillStyle = '#9fffa6';
       }
     }
 

@@ -16,8 +16,9 @@ export const JET = {
   maxThrust: 130000,         // N at full afterburner
   // Aerodynamics (toy model, not real coefficients)
   liftSlope: 5.5,            // lift coefficient per radian of AoA (pre-stall)
-  stallAoA: 0.28,            // ~16 degrees
-  postStallLift: 0.25,       // collapse multiplier after stall
+  stallAoA: 0.42,            // base critical AoA (~24°) — only at low speed
+  stallSpeed: 70,            // m/s; below this, stallAoA applies. Above, AoA tolerance grows
+  postStallLift: 0.55,       // milder lift collapse — easier to recover
   parasiticDrag: 0.018,
   inducedDragK: 0.04,
   wingArea: 28,

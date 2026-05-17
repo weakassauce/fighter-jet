@@ -14,7 +14,6 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'hi
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -56,21 +55,10 @@ scene.add(camera); // camera must be in scene graph for children to render
 const cockpitGroup = new THREE.Group();
 cockpitGroup.visible = false;
 camera.add(cockpitGroup);
-// Cockpit fill lighting — moderate, enough to read panels without washing out.
-const cockpitKey = new THREE.PointLight(0xfff4d8, 2.2, 6, 1.4);
-cockpitKey.position.set(0, 0.9, -0.4);
-cockpitGroup.add(cockpitKey);
-const cockpitFillL = new THREE.PointLight(0xffffff, 1.0, 5, 1.6);
-cockpitFillL.position.set(-0.7, 0.3, 0.2);
-cockpitGroup.add(cockpitFillL);
-const cockpitFillR = new THREE.PointLight(0xffffff, 1.0, 5, 1.6);
-cockpitFillR.position.set(0.7, 0.3, 0.2);
-cockpitGroup.add(cockpitFillR);
-const cockpitGlow = new THREE.PointLight(0xa0ffb0, 0.5, 3, 1.8);
-cockpitGlow.position.set(0, -0.3, -0.6);
-cockpitGroup.add(cockpitGlow);
-const cockpitAmb = new THREE.AmbientLight(0xc8d8ff, 0.35);
-cockpitGroup.add(cockpitAmb);
+// Soft fill light inside cockpit so panels stay readable when sun is behind us.
+const cockpitLight = new THREE.PointLight(0xfff0c8, 1.0, 4, 1.5);
+cockpitLight.position.set(0, 0.4, -0.2);
+cockpitGroup.add(cockpitLight);
 // Cockpit tuning — exposed on window for live tweaking from devtools.
 const COCKPIT_TUNE = { scale: 2.2, x: 0, y: -0.55, z: -0.35, rotY: 0 };
 window.cockpit = COCKPIT_TUNE;
@@ -96,18 +84,7 @@ tryLoadGLB('/assets/cockpit.glb').then((g) => {
       o.castShadow = false;
       o.receiveShadow = false;
       o.frustumCulled = false;
-      const mats = Array.isArray(o.material) ? o.material : [o.material];
-      for (const m of mats) {
-        if (!m) continue;
-        m.fog = false;
-        m.toneMapped = true;
-        // Subtle self-glow so darkest panels stay legible without washing out
-        if (m.emissive && m.color) {
-          m.emissive.copy(m.color).multiplyScalar(0.08);
-          m.emissiveIntensity = 1.0;
-        }
-        m.needsUpdate = true;
-      }
+      if (o.material) { o.material.fog = false; o.material.toneMapped = true; }
     }
   });
   cockpitModel = g;

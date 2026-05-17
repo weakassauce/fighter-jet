@@ -56,14 +56,14 @@ let playerExploded = false;
 
 // G-LOC: vision dims when pulling sustained high Gs. Recovers slowly.
 let visionDim = 0;
-const G_THRESHOLD = 5;        // start darkening above this
-const G_BLACKOUT = 8.5;       // full black at/around this G held briefly
+const G_THRESHOLD = 6.5;      // start darkening above this — harder to trigger
+const G_BLACKOUT = 11;        // full black cap raised — needs more sustained Gs
 function updateVisionDim(dt) {
   const g = Math.abs(jet.gLoad);
   if (g > G_THRESHOLD) {
-    // Build dim faster the further above threshold
+    // Build dim slowly so the screen fades to black over seconds, not instantly
     const over = g - G_THRESHOLD;
-    visionDim = Math.min(1, visionDim + (over / (G_BLACKOUT - G_THRESHOLD)) * dt * 0.9);
+    visionDim = Math.min(1, visionDim + (over / (G_BLACKOUT - G_THRESHOLD)) * dt * 0.35);
   } else {
     // Recovery — slower at first, then faster (eyes adjusting)
     const recover = 0.35 + (1 - visionDim) * 0.5;

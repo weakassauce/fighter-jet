@@ -96,7 +96,20 @@ tryLoadGLB('/assets/cockpit.glb').then((g) => {
       o.castShadow = false;
       o.receiveShadow = false;
       o.frustumCulled = false;
-      if (o.material) { o.material.fog = false; o.material.toneMapped = true; }
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if (!m) continue;
+        m.fog = false;
+        m.toneMapped = true;
+        // Self-glow so panels are never pitch-black; subtle so shading still reads
+        if (m.emissive && m.color) {
+          m.emissive.copy(m.color).multiplyScalar(0.35);
+          m.emissiveIntensity = 1.0;
+        }
+        if ('metalness' in m) m.metalness = Math.min(m.metalness ?? 0, 0.3);
+        if ('roughness' in m) m.roughness = Math.max(m.roughness ?? 0.5, 0.6);
+        m.needsUpdate = true;
+      }
     }
   });
   cockpitModel = g;

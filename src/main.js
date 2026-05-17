@@ -55,19 +55,41 @@ scene.add(camera); // camera must be in scene graph for children to render
 const cockpitGroup = new THREE.Group();
 cockpitGroup.visible = false;
 camera.add(cockpitGroup);
+// Soft fill light inside cockpit so panels stay readable when sun is behind us.
+const cockpitLight = new THREE.PointLight(0xfff0c8, 1.0, 4, 1.5);
+cockpitLight.position.set(0, 0.4, -0.2);
+cockpitGroup.add(cockpitLight);
+// Cockpit tuning — exposed on window for live tweaking from devtools.
+const COCKPIT_TUNE = { scale: 2.2, x: 0, y: -0.55, z: -0.35, rotY: 0 };
+window.cockpit = COCKPIT_TUNE;
+let cockpitModel = null;
+function applyCockpitTune() {
+  if (!cockpitModel) return;
+  cockpitModel.position.set(COCKPIT_TUNE.x, COCKPIT_TUNE.y, COCKPIT_TUNE.z);
+  cockpitModel.rotation.y = COCKPIT_TUNE.rotY;
+  cockpitModel.scale.setScalar(COCKPIT_TUNE.scale / (cockpitModel.userData.maxAxis || 1));
+}
+window.applyCockpit = applyCockpitTune;
+
 tryLoadGLB('/assets/cockpit.glb').then((g) => {
   if (!g) return;
-  // Fit cockpit into a ~2m bubble in front of the camera. Forward in camera local = -Z.
   const box = new THREE.Box3().setFromObject(g);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
   g.position.sub(center);
-  const maxAxis = Math.max(size.x, size.y, size.z);
-  if (maxAxis > 0) g.scale.setScalar(1.4 / maxAxis);
-  // Push slightly forward + down so dash sits below center of view
-  g.position.set(0, -0.35, -0.55);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; o.frustumCulled = false; } });
+  const maxAxis = Math.max(size.x, size.y, size.z) || 1;
+  g.userData.maxAxis = maxAxis;
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = false;
+      o.receiveShadow = false;
+      o.frustumCulled = false;
+      if (o.material) { o.material.fog = false; o.material.toneMapped = true; }
+    }
+  });
+  cockpitModel = g;
   cockpitGroup.add(g);
+  applyCockpitTune();
 });
 
 // Weapons
@@ -79,7 +101,7 @@ let missileCooldown = 0;
 const input = new Input();
 const hud = new HUD();
 
-let view = 'chase'; // 'chase' | 'cockpit'
+let view = 'cockpit'; // 'cockpit' | 'chase'  — first-person by default
 let gunCooldown = 0;
 let lockTarget = null;
 

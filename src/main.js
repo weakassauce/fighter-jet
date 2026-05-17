@@ -14,7 +14,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'hi
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.toneMappingExposure = 1.05;
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -56,20 +56,20 @@ scene.add(camera); // camera must be in scene graph for children to render
 const cockpitGroup = new THREE.Group();
 cockpitGroup.visible = false;
 camera.add(cockpitGroup);
-// Cockpit fill lighting — generous, panels stay bright from every angle.
-const cockpitKey = new THREE.PointLight(0xfff4d8, 6.0, 8, 1.0);
-cockpitKey.position.set(0, 1.0, -0.4);
+// Cockpit fill lighting — moderate, enough to read panels without washing out.
+const cockpitKey = new THREE.PointLight(0xfff4d8, 2.2, 6, 1.4);
+cockpitKey.position.set(0, 0.9, -0.4);
 cockpitGroup.add(cockpitKey);
-const cockpitFillL = new THREE.PointLight(0xffffff, 3.0, 6, 1.2);
-cockpitFillL.position.set(-0.8, 0.3, 0.2);
+const cockpitFillL = new THREE.PointLight(0xffffff, 1.0, 5, 1.6);
+cockpitFillL.position.set(-0.7, 0.3, 0.2);
 cockpitGroup.add(cockpitFillL);
-const cockpitFillR = new THREE.PointLight(0xffffff, 3.0, 6, 1.2);
-cockpitFillR.position.set(0.8, 0.3, 0.2);
+const cockpitFillR = new THREE.PointLight(0xffffff, 1.0, 5, 1.6);
+cockpitFillR.position.set(0.7, 0.3, 0.2);
 cockpitGroup.add(cockpitFillR);
-const cockpitGlow = new THREE.PointLight(0xa0ffb0, 1.0, 3, 1.5);
+const cockpitGlow = new THREE.PointLight(0xa0ffb0, 0.5, 3, 1.8);
 cockpitGlow.position.set(0, -0.3, -0.6);
 cockpitGroup.add(cockpitGlow);
-const cockpitAmb = new THREE.AmbientLight(0xc8d8ff, 0.9);
+const cockpitAmb = new THREE.AmbientLight(0xc8d8ff, 0.35);
 cockpitGroup.add(cockpitAmb);
 // Cockpit tuning — exposed on window for live tweaking from devtools.
 const COCKPIT_TUNE = { scale: 2.2, x: 0, y: -0.55, z: -0.35, rotY: 0 };
@@ -101,13 +101,11 @@ tryLoadGLB('/assets/cockpit.glb').then((g) => {
         if (!m) continue;
         m.fog = false;
         m.toneMapped = true;
-        // Self-glow so panels are never pitch-black; subtle so shading still reads
+        // Subtle self-glow so darkest panels stay legible without washing out
         if (m.emissive && m.color) {
-          m.emissive.copy(m.color).multiplyScalar(0.35);
+          m.emissive.copy(m.color).multiplyScalar(0.08);
           m.emissiveIntensity = 1.0;
         }
-        if ('metalness' in m) m.metalness = Math.min(m.metalness ?? 0, 0.3);
-        if ('roughness' in m) m.roughness = Math.max(m.roughness ?? 0.5, 0.6);
         m.needsUpdate = true;
       }
     }

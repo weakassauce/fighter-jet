@@ -33,11 +33,15 @@ const jetMesh = buildPlaceholderJet({ color: 0x556677, accent: 0xffaa33 });
 scene.add(jetMesh);
 const jet = new Jet(jetMesh);
 
-// Async: replace with a generated jet if /assets/player_jet.glb exists
+// Async: replace with a generated jet if /assets/player_jet.glb exists.
+// TRELLIS GLBs come out facing +Z (toward the chase camera) so we flip 180°
+// to align the nose with the jet's -Z forward.
 tryLoadGLB('/assets/player_jet.glb').then((g) => {
   if (!g) return;
   jet.mesh.clear();
-  jet.mesh.add(normalizeJetModel(g, 10));
+  const norm = normalizeJetModel(g, 10);
+  norm.rotation.y = Math.PI;
+  jet.mesh.add(norm);
 });
 
 // Enemies
@@ -46,7 +50,9 @@ enemies.spawnAll(jet.position);
 
 tryLoadGLB('/assets/enemy_jet.glb').then((g) => {
   if (!g) return;
-  enemies.replaceMeshes(normalizeJetModel(g, 9));
+  const norm = normalizeJetModel(g, 9);
+  norm.rotation.y = Math.PI;
+  enemies.replaceMeshes(norm);
 });
 
 // Cockpit interior — attached to the camera, visible only in cockpit view.
@@ -116,6 +122,40 @@ tryLoadGLB('/assets/cockpit.glb').then((g) => {
   cockpitGroup.add(g);
   applyCockpitTune();
 });
+
+// Engine flames — additive cones behind the jet, scaled by throttle, breathing.
+const flameOuterGeo = new THREE.ConeGeometry(0.7, 4.5, 14, 1, true);
+flameOuterGeo.rotateX(Math.PI / 2);   // tip points along +Z (jet's backward)
+flameOuterGeo.translate(0, 0, 2.25);
+const flameInnerGeo = new THREE.ConeGeometry(0.35, 2.6, 10, 1, true);
+flameInnerGeo.rotateX(Math.PI / 2);
+flameInnerGeo.translate(0, 0, 1.3);
+const flameOuter = new THREE.Mesh(flameOuterGeo, new THREE.MeshBasicMaterial({
+  color: 0xff7733, transparent: true, opacity: 0.75,
+  blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+}));
+const flameInner = new THREE.Mesh(flameInnerGeo, new THREE.MeshBasicMaterial({
+  color: 0xffeebb, transparent: true, opacity: 0.95,
+  blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+}));
+const flameGroup = new THREE.Group();
+flameGroup.add(flameOuter); flameGroup.add(flameInner);
+scene.add(flameGroup);
+
+function updateFlame(time) {
+  const back = jet.forward().multiplyScalar(-4.8).add(jet.position);
+  flameGroup.position.copy(back);
+  flameGroup.quaternion.copy(jet.quaternion);
+  const thr = jet.throttle;
+  const breath = 0.85 + Math.sin(time * 35) * 0.07 + Math.sin(time * 91) * 0.04;
+  const len = (0.4 + thr * 1.8) * breath;
+  const width = (0.65 + thr * 0.35) * breath;
+  flameOuter.scale.set(width, width, len);
+  flameInner.scale.set(width * 0.9, width * 0.9, len * 0.65);
+  flameOuter.material.opacity = 0.55 + thr * 0.4;
+  flameInner.material.opacity = 0.85 + thr * 0.1;
+  flameGroup.visible = thr > 0.02 && !jet.dead && view !== 'cockpit';
+}
 
 // Weapons
 const playerBullets = new Bullets(scene, 0xfff2a8);
@@ -200,6 +240,9 @@ function frame(now) {
 
   // Camera
   updateCamera(dt);
+
+  // Engine flame
+  updateFlame(now * 0.001);
 
   // HUD
   hud.draw({ jet, enemies: enemies.list, lockTarget });

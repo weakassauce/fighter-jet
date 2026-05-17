@@ -1,13 +1,13 @@
 // All tunables in one place. Distances in meters, speeds in m/s, angles in radians unless noted.
 
 export const WORLD = {
-  groundSize: 40000,        // square ground extent
+  groundSize: 80000,        // square ground extent — vast landscape
   skyColor: 0x9fd3ff,
   groundColor: 0x4a6b3a,
-  fogNear: 1500,
-  fogFar: 18000,
+  fogNear: 4000,
+  fogFar: 45000,
   sunDir: [-0.4, 0.85, 0.3],
-  startAltitude: 1200,
+  startAltitude: 2400,      // above the tallest mountain peaks
   startSpeed: 180,          // ~m/s, roughly 650 km/h
 };
 

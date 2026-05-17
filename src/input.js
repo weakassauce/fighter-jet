@@ -27,9 +27,12 @@ export class Input {
     const k = this.keys;
     const ax = (a, b) => (k.has(a) ? 1 : 0) - (k.has(b) ? 1 : 0);
     return {
-      pitch: ax('KeyS', 'KeyW'),     // nose up positive when S pressed (pulls back)
-      roll:  ax('KeyD', 'KeyA'),     // roll right positive
-      yaw:   ax('KeyE', 'KeyQ'),     // yaw right positive
+      // W = nose up, S = nose down (arcade convention, not sim "pull stick back")
+      pitch: ax('KeyW', 'KeyS'),
+      // A = roll left, D = roll right
+      roll:  ax('KeyD', 'KeyA'),
+      // Q = yaw left, E = yaw right
+      yaw:   ax('KeyE', 'KeyQ'),
       throttle: ax('ShiftLeft', 'ControlLeft') + ax('ShiftRight', 'ControlRight'),
       firingGuns: k.has('Space'),
     };

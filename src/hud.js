@@ -97,34 +97,41 @@ export class HUD {
 
   _drawPitchLadder(jet, cx, cy) {
     const ctx = this.ctx;
-    // Project body forward into screen-relative pitch/roll feel
     const fwd = jet.forward();
-    const up = jet.up();
     const pitch = Math.asin(THREE.MathUtils.clamp(fwd.y, -1, 1));
-    // Bank: angle between body up and world up projected to right axis
-    const right = jet.right();
-    const worldUp = new THREE.Vector3(0, 1, 0);
-    const bank = Math.atan2(right.y, up.y);
+    const pitchDeg = pitch * 180 / Math.PI;
 
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(bank);
+    // No bank rotation — pitch ladder stays screen-aligned (non-conformal).
     ctx.strokeStyle = 'rgba(159,255,166,0.7)';
-    for (let deg = -30; deg <= 30; deg += 10) {
-      const off = (pitch * 180 / Math.PI - deg) * 8;
-      const y = off;
-      if (Math.abs(y) > 220) continue;
+    ctx.fillStyle = '#9fffa6';
+    const pxPerDeg = 8;
+    const halfHeight = Math.max(160, this.canvas.height * 0.4);
+    // Full range -90..+90; only ones inside the visible band actually draw.
+    for (let deg = -90; deg <= 90; deg += 10) {
+      const y = (pitchDeg - deg) * pxPerDeg;
+      if (Math.abs(y) > halfHeight) continue;
       const len = deg === 0 ? 160 : 80;
+      const isDive = deg < 0;
+      // Dashed for dive lines, solid for climb/horizon.
+      ctx.setLineDash(isDive ? [10, 8] : []);
       ctx.beginPath();
       ctx.moveTo(-len, y);
       ctx.lineTo(len, y);
       ctx.stroke();
+      // Tick marks on inner ends pointing toward horizon (down for climb, up for dive)
       if (deg !== 0) {
-        ctx.fillStyle = '#9fffa6';
-        ctx.fillText(`${deg}`, len + 6, y + 4);
+        const tick = isDive ? -10 : 10;
+        ctx.beginPath();
+        ctx.moveTo(-len, y); ctx.lineTo(-len, y + tick);
+        ctx.moveTo( len, y); ctx.lineTo( len, y + tick);
+        ctx.stroke();
+        ctx.fillText(`${deg}`,  len + 6, y + 4);
         ctx.fillText(`${deg}`, -len - 22, y + 4);
       }
     }
+    ctx.setLineDash([]);
     ctx.restore();
   }
 

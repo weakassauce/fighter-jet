@@ -16,7 +16,7 @@ export class HUD {
     this.canvas.height = window.innerHeight;
   }
 
-  draw({ jet, enemies, lockTarget, lockProgress = 0 }) {
+  draw({ jet, enemies, lockTarget, lockProgress = 0, visionDim = 0 }) {
     const ctx = this.ctx;
     const W = this.canvas.width, H = this.canvas.height;
     ctx.clearRect(0, 0, W, H);
@@ -115,6 +115,28 @@ export class HUD {
         ctx.strokeStyle = 'rgba(159,255,166,0.55)';
         ctx.strokeRect(s.x - 12, s.y - 12, 24, 24);
       }
+    }
+
+    // G-LOC vision dim: radial vignette that closes inward as dim rises.
+    // Below ~0.85 you get a tunneling gray-out; at full dim the screen is black.
+    if (visionDim > 0.01) {
+      const cx2 = W / 2, cy2 = H / 2;
+      const maxR = Math.max(W, H) * 0.85;
+      // Vignette
+      const innerR = maxR * (1 - Math.min(1, visionDim * 1.05));
+      const grad = ctx.createRadialGradient(cx2, cy2, innerR, cx2, cy2, maxR);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, `rgba(0,0,0,${Math.min(1, visionDim * 1.2)})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      // Full blackout layer past 0.9
+      if (visionDim > 0.9) {
+        ctx.fillStyle = `rgba(0,0,0,${(visionDim - 0.9) * 10})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      // Subtle G-load text near top
+      ctx.fillStyle = '#ff8866';
+      ctx.fillText(`${jet.gLoad.toFixed(1)} G`, W / 2 - 16, 56);
     }
 
     ctx.restore();

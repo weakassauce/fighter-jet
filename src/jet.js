@@ -72,6 +72,7 @@ export class Jet {
     this.aoa = 0;
     this.stalled = false;
     this.dead = false;
+    this.gLoad = 1; // load factor along body-up; 1 in level flight, >1 during pull-up
 
     // Reusable temporaries
     this._fwd = new THREE.Vector3();
@@ -166,6 +167,14 @@ export class Jet {
     const accel = force.multiplyScalar(1 / JET.mass);
     this.velocity.addScaledVector(accel, dt);
     this.position.addScaledVector(this.velocity, dt);
+
+    // Pilot G-load: lift along body-up axis divided by weight, plus 1G baseline
+    // when level. Higher in pull-ups, lower (or negative) when pushed/inverted.
+    if (speed > 1) {
+      this.gLoad = (liftMag / (JET.mass * 9.81));
+    } else {
+      this.gLoad = 1;
+    }
 
     // Ground collision
     if (this.position.y < 5) {

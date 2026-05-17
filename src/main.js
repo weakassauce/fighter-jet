@@ -54,6 +54,23 @@ const explosions = new Explosions(scene);
 enemies.onDeath = (pos) => explosions.spawn(pos, 32);
 let playerExploded = false;
 
+// G-LOC: vision dims when pulling sustained high Gs. Recovers slowly.
+let visionDim = 0;
+const G_THRESHOLD = 5;        // start darkening above this
+const G_BLACKOUT = 8.5;       // full black at/around this G held briefly
+function updateVisionDim(dt) {
+  const g = Math.abs(jet.gLoad);
+  if (g > G_THRESHOLD) {
+    // Build dim faster the further above threshold
+    const over = g - G_THRESHOLD;
+    visionDim = Math.min(1, visionDim + (over / (G_BLACKOUT - G_THRESHOLD)) * dt * 0.9);
+  } else {
+    // Recovery — slower at first, then faster (eyes adjusting)
+    const recover = 0.35 + (1 - visionDim) * 0.5;
+    visionDim = Math.max(0, visionDim - dt * recover);
+  }
+}
+
 tryLoadGLB('/assets/enemy_jet.glb').then((g) => {
   if (!g) return;
   const norm = normalizeJetModel(g, 9);
@@ -274,8 +291,11 @@ function frame(now) {
   // Explosions
   explosions.update(dt);
 
+  // Pilot vision dim (G-LOC)
+  updateVisionDim(dt);
+
   // HUD
-  hud.draw({ jet, enemies: enemies.list, lockTarget, lockProgress });
+  hud.draw({ jet, enemies: enemies.list, lockTarget, lockProgress, visionDim });
 
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
